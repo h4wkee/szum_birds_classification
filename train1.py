@@ -27,10 +27,10 @@ split = 8
 epochs = 16
 lr_rate = .006
 image_size = 224
-model_size = 's'
+model_size = 'M'
 dropout = .5
 rand_seed = 12357
-dwell = False
+dwell = True
 kaggle = True
 
 
