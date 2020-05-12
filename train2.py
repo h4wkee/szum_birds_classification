@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import time
 import os
 from IPython.core.display import display, HTML
+
 display(HTML("<style>.container { width:100% !important; }</style>"))
 
 
@@ -160,56 +161,59 @@ def display_pred(output_dir, pred, file_names, labels, subject, model_size, clas
         ans = input('Press Enter to continue')
     return accuracy
 
-def save_model(output_dir,subject, accuracy, image_size,model_size, model, weights):
+
+def save_model(output_dir, subject, accuracy, image_size, model_size, model, weights):
     # save the model with the  subect-accuracy.h5
-    acc=str(accuracy)[0:5]
-    id=subject + '-' + model_size + '-' +str(image_size) + '-' + acc + '.h5'
+    acc = str(accuracy)[0:5]
+    id = subject + '-' + model_size + '-' + str(image_size) + '-' + acc + '.h5'
     model.set_weights(weights)
-    model_save_path=os.path.join(output_dir,id)
+    model_save_path = os.path.join(output_dir, id)
     model.save(model_save_path)
 
-def make_predictions( model, weights, test_gen, lr):
+
+def make_predictions(model, weights, test_gen, lr):
     config = model.get_config()
     pmodel = Model.from_config(config)  # copy of the model
-    pmodel.set_weights(weights) #load saved weights with lowest validation loss
+    pmodel.set_weights(weights)  # load saved weights with lowest validation loss
     pmodel.compile(Adam(lr=lr), loss='categorical_crossentropy', metrics=['accuracy'])
     print('Training has completed. Now loading test set to see how accurate the model is')
-    results=pmodel.evaluate(test_gen, verbose=0)
-    accuracy=results[1]*100
-    print('Model accuracy on Test Set is {0:7.2f} %'.format(results[1]* 100))
-    predictions=pmodel.predict_generator(test_gen, verbose=0)
-    return (predictions,accuracy)
+    results = pmodel.evaluate(test_gen, verbose=0)
+    accuracy = results[1] * 100
+    print('Model accuracy on Test Set is {0:7.2f} %'.format(results[1] * 100))
+    predictions = pmodel.predict_generator(test_gen, verbose=0)
+    return (predictions, accuracy)
 
-def tr_plot(tacc,vacc,tloss,vloss):
-    #Plot the training and validation data
-    Epoch_count=len(tloss)
-    Epochs=[]
-    for i in range (0,Epoch_count):
-        Epochs.append(i+1)
-    index_loss=np.argmin(vloss)#  this is the epoch with the lowest validation loss
-    val_lowest=vloss[index_loss]
-    index_acc=np.argmax(vacc)
-    val_highest=vacc[index_acc]
+
+def tr_plot(tacc, vacc, tloss, vloss):
+    # Plot the training and validation data
+    Epoch_count = len(tloss)
+    Epochs = []
+    for i in range(0, Epoch_count):
+        Epochs.append(i + 1)
+    index_loss = np.argmin(vloss)  # this is the epoch with the lowest validation loss
+    val_lowest = vloss[index_loss]
+    index_acc = np.argmax(vacc)
+    val_highest = vacc[index_acc]
     plt.style.use('fivethirtyeight')
-    sc_label='best epoch= '+ str(index_loss+1)
-    vc_label='best epoch= '+ str(index_acc + 1)
-    fig,axes=plt.subplots(nrows=1, ncols=2, figsize=(15,5))
-    axes[0].plot(Epochs,tloss, 'r', label='Training loss')
-    axes[0].plot(Epochs,vloss,'g',label='Validation loss' )
-    axes[0].scatter(index_loss+1,val_lowest, s=150, c= 'blue', label=sc_label)
+    sc_label = 'best epoch= ' + str(index_loss + 1)
+    vc_label = 'best epoch= ' + str(index_acc + 1)
+    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 5))
+    axes[0].plot(Epochs, tloss, 'r', label='Training loss')
+    axes[0].plot(Epochs, vloss, 'g', label='Validation loss')
+    axes[0].scatter(index_loss + 1, val_lowest, s=150, c='blue', label=sc_label)
     axes[0].set_title('Training and Validation Loss')
     axes[0].set_xlabel('Epochs')
     axes[0].set_ylabel('Loss')
     axes[0].legend()
-    axes[1].plot (Epochs,tacc,'r',label= 'Training Accuracy')
-    axes[1].plot (Epochs,vacc,'g',label= 'Validation Accuracy')
-    axes[1].scatter(index_acc+1,val_highest, s=150, c= 'blue', label=vc_label)
+    axes[1].plot(Epochs, tacc, 'r', label='Training Accuracy')
+    axes[1].plot(Epochs, vacc, 'g', label='Validation Accuracy')
+    axes[1].scatter(index_acc + 1, val_highest, s=150, c='blue', label=vc_label)
     axes[1].set_title('Training and Validation Accuracy')
     axes[1].set_xlabel('Epochs')
     axes[1].set_ylabel('Accuracy')
     axes[1].legend()
     plt.tight_layout
-    #plt.style.use('fivethirtyeight')
+    # plt.style.use('fivethirtyeight')
     plt.show()
 
 
@@ -231,43 +235,44 @@ def train(model, callbacks, generators, epochs, start_epoch):
     print_in_color(msg, (0, 0, 255), (0, 0, 0))
     return data
 
-def make_model(classes,lr_rate, image_size,model_size,dropout, rand_seed):
-    size=len(classes)
-    mobile = tf.keras.applications.mobilenet.MobileNet( include_top=False,
-                                                           input_shape=(image_size,image_size,3),
-                                                           pooling='max', weights='imagenet',
-                                                           alpha=1, depth_multiplier=1,dropout=.4)
-    x=mobile.layers[-1].output
-    if model_size=='S':
+
+def make_model(classes, lr_rate, image_size, model_size, dropout, rand_seed):
+    size = len(classes)
+    mobile = tf.keras.applications.mobilenet.MobileNet(include_top=False,
+                                                       input_shape=(image_size, image_size, 3),
+                                                       pooling='max', weights='imagenet',
+                                                       alpha=1, depth_multiplier=1, dropout=.4)
+    x = mobile.layers[-1].output
+    if model_size == 'S':
         pass
-       # x=Dense(128, kernel_regularizer = regularizers.l2(l = 0.016),activity_regularizer=regularizers.l1(0.006),
-                #bias_regularizer=regularizers.l1(0.006) ,activation='relu')(x)
-        #x=Dropout(rate=dropout, seed=rand_seed)(x)
-    elif model_size=='M':
-        x=Dense(256, kernel_regularizer = regularizers.l2(l = 0.016),activity_regularizer=regularizers.l1(0.006),
-                bias_regularizer=regularizers.l1(0.006),activation='relu')(x)
-        x=Dropout(rate=dropout, seed=rand_seed)(x)
-        x=keras.layers.BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001 )(x)
-        x=Dense(16, kernel_regularizer = regularizers.l2(l = 0.016),activity_regularizer=regularizers.l1(0.006),
-                bias_regularizer=regularizers.l1(0.006),activation='relu')(x)
-        x=Dropout(rate=dropout, seed=rand_seed)(x)
+    # x=Dense(128, kernel_regularizer = regularizers.l2(l = 0.016),activity_regularizer=regularizers.l1(0.006),
+    # bias_regularizer=regularizers.l1(0.006) ,activation='relu')(x)
+    # x=Dropout(rate=dropout, seed=rand_seed)(x)
+    elif model_size == 'M':
+        x = Dense(256, kernel_regularizer=regularizers.l2(l=0.016), activity_regularizer=regularizers.l1(0.006),
+                  bias_regularizer=regularizers.l1(0.006), activation='relu')(x)
+        x = Dropout(rate=dropout, seed=rand_seed)(x)
+        x = keras.layers.BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(x)
+        x = Dense(16, kernel_regularizer=regularizers.l2(l=0.016), activity_regularizer=regularizers.l1(0.006),
+                  bias_regularizer=regularizers.l1(0.006), activation='relu')(x)
+        x = Dropout(rate=dropout, seed=rand_seed)(x)
     else:
-        x=Dense(1024, kernel_regularizer = regularizers.l2(l = 0.016),activity_regularizer=regularizers.l1(0.006),
-                bias_regularizer=regularizers.l1(0.006),activation='relu')(x)
-        x=Dropout(rate=dropout, seed=rand_seed)(x)
-        x=keras.layers.BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001 )(x)
-        x=Dense(128, kernel_regularizer = regularizers.l2(l = 0.016),activity_regularizer=regularizers.l1(0.006),
-                bias_regularizer=regularizers.l1(0.006),activation='relu')(x)
-        x=Dropout(rate=dropout, seed=rand_seed)(x)
-        x=keras.layers.BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001 )(x)
-        x=Dense(16, kernel_regularizer = regularizers.l2(l = 0.016),activity_regularizer=regularizers.l1(0.006),
-                bias_regularizer=regularizers.l1(0.006),activation='relu')(x)
-        x=Dropout(rate=dropout, seed=rand_seed)(x)
-    x=keras.layers.BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001 )(x)
-    predictions=Dense (len(classes), activation='softmax')(x)
+        x = Dense(1024, kernel_regularizer=regularizers.l2(l=0.016), activity_regularizer=regularizers.l1(0.006),
+                  bias_regularizer=regularizers.l1(0.006), activation='relu')(x)
+        x = Dropout(rate=dropout, seed=rand_seed)(x)
+        x = keras.layers.BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(x)
+        x = Dense(128, kernel_regularizer=regularizers.l2(l=0.016), activity_regularizer=regularizers.l1(0.006),
+                  bias_regularizer=regularizers.l1(0.006), activation='relu')(x)
+        x = Dropout(rate=dropout, seed=rand_seed)(x)
+        x = keras.layers.BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(x)
+        x = Dense(16, kernel_regularizer=regularizers.l2(l=0.016), activity_regularizer=regularizers.l1(0.006),
+                  bias_regularizer=regularizers.l1(0.006), activation='relu')(x)
+        x = Dropout(rate=dropout, seed=rand_seed)(x)
+    x = keras.layers.BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(x)
+    predictions = Dense(len(classes), activation='softmax')(x)
     model = Model(inputs=mobile.input, outputs=predictions)
     for layer in model.layers:
-        layer.trainable=True
+        layer.trainable = True
     model.compile(Adamax(lr=lr_rate), loss='categorical_crossentropy', metrics=['accuracy'])
     return model
 
@@ -287,8 +292,8 @@ def make_generators(paths, mode, split, classes, image_size, rand_seed):
         train_gen = ImageDataGenerator(
             preprocessing_function=keras.applications.mobilenet.preprocess_input).flow_from_directory(paths[0],
                                                                                                       target_size=(
-                                                                                                      image_size,
-                                                                                                      image_size),
+                                                                                                          image_size,
+                                                                                                          image_size),
                                                                                                       batch_size=batch_size,
                                                                                                       seed=rand_seed,
                                                                                                       class_mode='categorical',
@@ -297,8 +302,8 @@ def make_generators(paths, mode, split, classes, image_size, rand_seed):
         valid_gen = ImageDataGenerator(
             preprocessing_function=keras.applications.mobilenet.preprocess_input).flow_from_directory(paths[2],
                                                                                                       target_size=(
-                                                                                                      image_size,
-                                                                                                      image_size),
+                                                                                                          image_size,
+                                                                                                          image_size),
                                                                                                       batch_size=batch_size,
                                                                                                       seed=rand_seed,
                                                                                                       class_mode='categorical',
@@ -308,8 +313,8 @@ def make_generators(paths, mode, split, classes, image_size, rand_seed):
         test_gen = ImageDataGenerator(
             preprocessing_function=keras.applications.mobilenet.preprocess_input).flow_from_directory(paths[1],
                                                                                                       target_size=(
-                                                                                                      image_size,
-                                                                                                      image_size),
+                                                                                                          image_size,
+                                                                                                          image_size),
                                                                                                       batch_size=batch_size,
                                                                                                       class_mode='categorical',
                                                                                                       color_mode='rgb',
@@ -335,26 +340,27 @@ def make_generators(paths, mode, split, classes, image_size, rand_seed):
         labels = valid_gen.labels
     return [[train_gen, valid_gen, valid_gen], file_names, labels]
 
-def get_paths(source_dir,output_dir,mode,subject,classes):
-    class_count=len(classes)
-    if mode =='ALL':
+
+def get_paths(source_dir, output_dir, mode, subject, classes):
+    class_count = len(classes)
+    if mode == 'ALL':
         # all data is in a single directory must be split into train, test, valid data sets
-        train_path=source_dir
-        test_path=None
-        valid_path=None
+        train_path = source_dir
+        test_path = None
+        valid_path = None
     else:
         # data is seperated in 3 directories train, test, valid
-        test_path=os.path.join(source_dir,'test')
-        train_path=os.path.join(source_dir, 'train')
-        valid_path=os.path.join(source_dir,'valid')
+        test_path = os.path.join(source_dir, 'test')
+        train_path = os.path.join(source_dir, 'train')
+        valid_path = os.path.join(source_dir, 'valid')
     # save the class dictionary as a text file so it can be used by predictor.py in the future
-    #saves file as subject.txt  structure is similar to a python dictionary
-    msg=''
+    # saves file as subject.txt  structure is similar to a python dictionary
+    msg = ''
     for i in range(0, class_count):
-        msg=msg + str(i) + ':' + classes[i] +','
-    id=subject +'-' + str(class_count)  + '.txt'
-    dict_path=os.path.join (output_dir, id)
-    f=open(dict_path, 'w')
+        msg = msg + str(i) + ':' + classes[i] + ','
+    id = subject + '-' + str(class_count) + '.txt'
+    dict_path = os.path.join(output_dir, id)
+    f = open(dict_path, 'w')
     f.write(msg)
     f.close()
     return [train_path, test_path, valid_path]
@@ -552,27 +558,31 @@ def TF2_classify(source_dir, out_dir, subject, split, epochs, lr_rate, image_siz
         else:
             return True
 
-def print_in_color(txt_msg,fore_tupple,back_tupple,):
-    #prints the text_msg in the foreground color specified by fore_tupple with the background specified by back_tupple
-    #text_msg is the text, fore_tupple is foregroud color tupple (r,g,b), back_tupple is background tupple (r,g,b)
-    rf,gf,bf=fore_tupple
-    rb,gb,bb=back_tupple
-    msg='{0}' + txt_msg
-    mat='\33[38;2;' + str(rf) +';' + str(gf) + ';' + str(bf) + ';48;2;' + str(rb) + ';' +str(gb) + ';' + str(bb) +'m'
-    print(msg .format(mat))
-    print('\33[0m') # returns default print color to back to black
+
+def print_in_color(txt_msg, fore_tupple, back_tupple, ):
+    # prints the text_msg in the foreground color specified by fore_tupple with the background specified by back_tupple
+    # text_msg is the text, fore_tupple is foregroud color tupple (r,g,b), back_tupple is background tupple (r,g,b)
+    rf, gf, bf = fore_tupple
+    rb, gb, bb = back_tupple
+    msg = '{0}' + txt_msg
+    mat = '\33[38;2;' + str(rf) + ';' + str(gf) + ';' + str(bf) + ';48;2;' + str(rb) + ';' + str(gb) + ';' + str(
+        bb) + 'm'
+    print(msg.format(mat))
+    print('\33[0m')  # returns default print color to back to black
     return
 
-source_dir=r'data/'
-output_dir=r'results/'
-subject='birds'
-split=8
-epochs=16
-lr_rate=.006
-image_size=224
-model_size='M'
-dropout=.5
-rand_seed=12357
-dwell=False
-kaggle=True
-status=TF2_classify(source_dir,output_dir,subject, split, epochs,lr_rate,image_size, model_size, dropout, rand_seed,dwell, kaggle)
+
+source_dir = r'data/'
+output_dir = r'results/'
+subject = 'birds'
+split = 8
+epochs = 16
+lr_rate = .006
+image_size = 224
+model_size = 's'
+dropout = .5
+rand_seed = 12357
+dwell = False
+kaggle = True
+status = TF2_classify(source_dir, output_dir, subject, split, epochs, lr_rate, image_size, model_size, dropout,
+                      rand_seed, dwell, kaggle)
