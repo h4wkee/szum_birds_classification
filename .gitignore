@@ -2,5 +2,9 @@
 venv/
 data/
 data_old/
+data_200/
+first_try.h5
+history.json.txt
+history.pickled.txt
 results/
 preview/

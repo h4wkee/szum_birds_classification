@@ -1,19 +1,14 @@
 import json
 import pickle
 
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras.optimizers import Adamax
-from tensorflow.keras import regularizers
-from tensorflow.keras.models import Model
-
-from keras.optimizers import rmsprop
+#from keras.optimizers import rmsprop
+from tensorflow.keras.optimizers import RMSprop
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D
-from tensorflow.keras.layers import Activation, Dropout, Flatten, Dense
 from tensorflow.keras import backend as K
-from keras.layers.normalization import BatchNormalization
+#from keras.layers.normalization import BatchNormalization
+from tensorflow.keras.layers import Activation, Dropout, Flatten, Dense, BatchNormalization
 from os import listdir
 
 train_data_dir = r'data/train'
@@ -21,17 +16,6 @@ validation_data_dir = r'data/valid'
 test_data_dir = r'data/test'
 species_list = listdir(train_data_dir)
 img_width, img_height = 150, 150  # 224, 224
-
-subject = 'birds'
-split = 8
-epochs = 16
-lr_rate = .006
-image_size = 224
-model_size = 'M'
-dropout = .5
-rand_seed = 12357
-dwell = True
-kaggle = True
 
 
 def get_empty_model():
@@ -84,53 +68,11 @@ def get_empty_model():
     model2.add(Dense(180))
     model2.add(Activation('softmax'))
 
-    model2.compile(loss='categorical_crossentropy', optimizer=rmsprop(lr=0.0001, decay=1e-6), metrics=['accuracy'])
+    model2.compile(loss='categorical_crossentropy', optimizer=RMSprop(lr=0.0001, decay=1e-6), metrics=['accuracy'])
 
     return model2
 
-
-def make_model(classes, lr_rate, image_size, model_size, dropout, rand_seed):
-    size = len(classes)
-    mobile = tf.keras.applications.mobilenet.MobileNet(include_top=False,
-                                                       input_shape=(image_size, image_size, 3),
-                                                       pooling='max', weights='imagenet',
-                                                       alpha=1, depth_multiplier=1, dropout=.4)
-    x = mobile.layers[-1].output
-    if model_size == 'S':
-        pass
-    # x=Dense(128, kernel_regularizer = regularizers.l2(l = 0.016),activity_regularizer=regularizers.l1(0.006),
-    # bias_regularizer=regularizers.l1(0.006) ,activation='relu')(x)
-    # x=Dropout(rate=dropout, seed=rand_seed)(x)
-    elif model_size == 'M':
-        x = Dense(256, kernel_regularizer=regularizers.l2(l=0.016), activity_regularizer=regularizers.l1(0.006),
-                  bias_regularizer=regularizers.l1(0.006), activation='relu')(x)
-        x = Dropout(rate=dropout, seed=rand_seed)(x)
-        x = keras.layers.BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(x)
-        x = Dense(16, kernel_regularizer=regularizers.l2(l=0.016), activity_regularizer=regularizers.l1(0.006),
-                  bias_regularizer=regularizers.l1(0.006), activation='relu')(x)
-        x = Dropout(rate=dropout, seed=rand_seed)(x)
-    else:
-        x = Dense(1024, kernel_regularizer=regularizers.l2(l=0.016), activity_regularizer=regularizers.l1(0.006),
-                  bias_regularizer=regularizers.l1(0.006), activation='relu')(x)
-        x = Dropout(rate=dropout, seed=rand_seed)(x)
-        x = keras.layers.BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(x)
-        x = Dense(128, kernel_regularizer=regularizers.l2(l=0.016), activity_regularizer=regularizers.l1(0.006),
-                  bias_regularizer=regularizers.l1(0.006), activation='relu')(x)
-        x = Dropout(rate=dropout, seed=rand_seed)(x)
-        x = keras.layers.BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(x)
-        x = Dense(16, kernel_regularizer=regularizers.l2(l=0.016), activity_regularizer=regularizers.l1(0.006),
-                  bias_regularizer=regularizers.l1(0.006), activation='relu')(x)
-        x = Dropout(rate=dropout, seed=rand_seed)(x)
-    x = keras.layers.BatchNormalization(axis=-1, momentum=0.99, epsilon=0.001)(x)
-    predictions = Dense(len(classes), activation='softmax')(x)
-    model = Model(inputs=mobile.input, outputs=predictions)
-    for layer in model.layers:
-        layer.trainable = True
-    model.compile(Adamax(lr=lr_rate), loss='categorical_crossentropy', metrics=['accuracy'])
-    return model
-
-
-def train_model(model, with_augmentation=True, save_history=False):
+def train_model(model, with_augmentation=True, save_history=True):
     nb_train_samples = 24497
     nb_validation_samples = 900
     epochs = 10  # 50
@@ -168,7 +110,7 @@ def train_model(model, with_augmentation=True, save_history=False):
 
     history = model.fit_generator(
         train_generator,
-        steps_per_epoch=nb_train_samples // batch_size,
+        steps_per_epoch=(nb_train_samples // batch_size) * 2,
         epochs=epochs,
         validation_data=validation_generator,
         validation_steps=nb_validation_samples // batch_size
@@ -209,6 +151,5 @@ def test_model_on_test_data(model):
 
 
 if __name__ == '__main__':
-    #train_model(get_empty_model())
-    train_model(make_model(species_list, lr_rate, image_size, model_size, dropout, rand_seed))
+    train_model(get_empty_model(), save_history=True, with_augmentation=True)
     # test_model_on_test_data(load_model('model2_noaug_first_try.h5'))
